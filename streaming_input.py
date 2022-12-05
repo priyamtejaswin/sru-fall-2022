@@ -4,6 +4,8 @@ import threading
 import soundfile as sf
 import numpy as np
 import torch
+from scipy.io.wavfile import write
+import sounddevice as sd
 
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
@@ -52,7 +54,6 @@ frames = []
 
 while True:
     data = stream.read(CHUNK)
-    frames.append(data)
     silence = bool(predict_scripted(data))
 
     prev = True
@@ -60,6 +61,7 @@ while True:
 
     if not silence:
         frames.append(data)
+
         while i < 2:
             data = stream.read(CHUNK)
             silence = bool(predict_scripted(data))
@@ -72,12 +74,9 @@ while True:
             if stop_:
                 break
 
-        waveFile = wave.open(WAVE_OUTPUT_FILENAME + str(file_index) + '.wav', 'wb')
-        waveFile.setnchannels(CHANNELS)
-        waveFile.setsampwidth(audio.get_sample_size(FORMAT))
-        waveFile.setframerate(RATE)
-        waveFile.writeframes(b''.join(frames))
-        waveFile.close()
+        audiodata = np.frombuffer(b''.join(frames), dtype=np.float32)
+        write(WAVE_OUTPUT_FILENAME + str(file_index) + '.wav', RATE, audiodata)
+        
         print("Saving", WAVE_OUTPUT_FILENAME + str(file_index) + '.wav')
         frames = []
         file_index += 1
