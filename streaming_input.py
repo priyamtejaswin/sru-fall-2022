@@ -1,11 +1,8 @@
 import pyaudio
-import wave
 import threading
-import soundfile as sf
 import numpy as np
 import torch
 from scipy.io.wavfile import write
-import sounddevice as sd
 
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
