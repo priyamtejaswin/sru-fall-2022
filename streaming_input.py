@@ -3,6 +3,13 @@ import threading
 import numpy as np
 import torch
 from scipy.io.wavfile import write
+import whisper
+from transformers import pipeline
+from script_model import get_model
+from multiprocessing.pool import ThreadPool
+pool = ThreadPool(processes=5)
+
+print("passed imports")
 
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
@@ -11,11 +18,31 @@ CHUNK = 16000
 WAVE_OUTPUT_FILENAME = "audio_file_"
 file_index = 0
 
-SCRIPTED_MODEL_PATH = './model_scripted.pt'
-model = torch.jit.load(SCRIPTED_MODEL_PATH)
-model.eval()
+# SCRIPTED_MODEL_PATH = './model_scripted.pt'
+# model = torch.jit.load(SCRIPTED_MODEL_PATH)
+# model.eval()
+model = get_model()
+
+print("passed scripting")
 
 device=torch.device('cpu')
+
+asr = whisper.load_model("tiny.en")
+print("passed whisper")
+
+# def get_asr_from_whisper(fpath):
+#     return asr.transcribe(fpath)["text"]
+# 
+# def get_de_from_en(english):
+#     return en2de_model(english)[0]["translation_text"]
+
+def workit(model_asr, model_translate, fpath):
+    en = model_asr.transcribe(fpath)["text"]
+    de = model_translate(en)[0]["translation_text"]
+    print({"ENGLISH": en, "GERMAN": de})
+
+en2de_model = pipeline("translation_en_to_de", "Helsinki-NLP/opus-mt-en-de")
+print("passed en2de")
 
 stop_ = False
 audio = pyaudio.PyAudio()
@@ -50,7 +77,7 @@ t = threading.Thread(target=stop, daemon=True).start()
 frames = []
 
 while True:
-    data = stream.read(CHUNK)
+    data = stream.read(CHUNK, exception_on_overflow = False)
     silence = bool(predict_scripted(data))
 
     prev = True
@@ -59,8 +86,8 @@ while True:
     if not silence:
         frames.append(data)
 
-        while i < 2:
-            data = stream.read(CHUNK)
+        while i < 1:
+            data = stream.read(CHUNK, exception_on_overflow = False)
             silence = bool(predict_scripted(data))
 
             i = i + 1 if silence and prev else 0
@@ -73,8 +100,17 @@ while True:
 
         audiodata = np.frombuffer(b''.join(frames), dtype=np.float32)
         write(WAVE_OUTPUT_FILENAME + str(file_index) + '.wav', RATE, audiodata)
-        
-        print("Saving", WAVE_OUTPUT_FILENAME + str(file_index) + '.wav')
+        fname = WAVE_OUTPUT_FILENAME + str(file_index) + '.wav'
+        print("Saved", fname)
+        # text_en = get_asr_from_whisper(fname)
+        # text_de = get_de_from_en(text_en)
+
+        # thread = threading.Thread(target = workit, args=(asr, en2de_model, fname))
+        # thread.start()
+        # thread.join()
+        async_result = pool.apply_async(workit, (asr, en2de_model, fname))
+        async_result.get()
+
         frames = []
         file_index += 1
 
