@@ -42,11 +42,18 @@ class M5(nn.Module):
         x = self.fc1(x)
         return x
 
-model = M5(n_input=1, n_output=2)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu'))['model_state_dict'])
-model.to(device)
-model.eval()
+def get_model():
+    model = M5(n_input=1, n_output=2)
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu'))['model_state_dict'])
+    model.eval()
+    return model
 
-model_scripted = torch.jit.script(model)
+if __name__ == '__main__':
+    model = M5(n_input=1, n_output=2)
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device('cpu'))['model_state_dict'])
+    model.to(device)
+    model.eval()
 
-model_scripted.save(SCRIPTED_MODEL_PATH)
+    model_scripted = torch.jit.script(model)
+
+    model_scripted.save(SCRIPTED_MODEL_PATH)
