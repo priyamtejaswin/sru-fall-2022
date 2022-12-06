@@ -68,7 +68,7 @@ def predict_scripted(data):
 def stop():
     global stop_
     while True:
-        if not input('Press Enter >>>'):
+        if not input('Ctrl+c to EXIT'):
             print('exit')
             stop_ = True
 
@@ -101,7 +101,7 @@ while True:
         audiodata = np.frombuffer(b''.join(frames), dtype=np.float32)
         write(WAVE_OUTPUT_FILENAME + str(file_index) + '.wav', RATE, audiodata)
         fname = WAVE_OUTPUT_FILENAME + str(file_index) + '.wav'
-        print("Saved", fname)
+        # print("Saved", fname)
         # text_en = get_asr_from_whisper(fname)
         # text_de = get_de_from_en(text_en)
 
